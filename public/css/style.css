@@ -1,0 +1,8 @@
+body {
+  font-family: Helvetica, Arial, Sans-Serif;
+  font-size: 12px;
+}
+#map_canvas {
+  width: 800px;
+  height: 450px;
+}

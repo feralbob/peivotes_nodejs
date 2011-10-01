@@ -1,0 +1,31 @@
+!!! 5
+html
+  head
+    link(rel="stylesheet", href="../css/reset.css")
+    link(rel="stylesheet", href="../css/text.css")
+    link(rel="stylesheet", href="../css/960_24_col.css")
+    link(rel="stylesheet", href="../css/style.css")
+    title PEI Election Night
+    script(src='https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js')
+    script(src='/socket.io/socket.io.js')
+    block scripts
+
+  body
+    .container_24
+      .grid_24
+        #header
+          h1 PEI Election Night
+      .clear
+
+      .grid_17 Content block
+        block content
+          p Default content block contents
+      .grid_4 Sidebar block
+        block sidebar_right
+          p Default sidebar right contents
+      .clear
+
+      .grid_24
+        #footer
+          block footer
+            p Powered by node.js, express, and socket.io

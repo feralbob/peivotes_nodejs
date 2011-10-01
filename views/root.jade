@@ -1,0 +1,26 @@
+extends layout
+
+block scripts
+  script(src='/js/socketio-client.js')
+//-  script(src='http://maps.googleapis.com/maps/api/js?sensor=false')
+//-  script(src='/districts.js')
+//-  script(src='/map.js')
+
+block content
+  #map_canvas
+    p Map canvas here.
+
+  #poll-links
+    ul
+      li
+        a#poll-1.poll-link(href="#") Get Poll 1
+      li
+        a#poll-2.poll-link(href="#") Get Poll 2
+      li
+        a#poll-3.poll-link(href="#") Get Poll 3
+      li
+        a#poll-4.poll-link(href="#") Get Poll 4
+
+block sidebar_right
+  #ajax-container
+    p Gets replaced by socket io message
