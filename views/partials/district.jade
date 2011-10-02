@@ -1,0 +1,17 @@
+h3
+  DISTRICT #{district.number} - #{district.name}
+
+h4 Candidates
+ul
+  each candidate in district.candidates
+    li
+      #{candidate.firstname} #{candidate.lastname} - #{candidate.votes}
+
+
+h4 Polls
+ul
+  each poll in district.polls
+    li
+      <a href="#" class="poll-link" id="poll-#{district.number}-#{poll.number}">#{poll.number} - #{poll.name}</a>
+
+

@@ -8,19 +8,16 @@ block scripts
 
 block content
   #map_canvas
-    p Map canvas here.
+    img(src="/map.png")
 
-  #poll-links
+  #district-links
+    h2 Districts
     ul
-      li
-        a#poll-1.poll-link(href="#") Get Poll 1
-      li
-        a#poll-2.poll-link(href="#") Get Poll 2
-      li
-        a#poll-3.poll-link(href="#") Get Poll 3
-      li
-        a#poll-4.poll-link(href="#") Get Poll 4
+      each district in districts
+        li
+          <a href="#" class="district-link" id="district-#{district.number}">#{district.number} - #{district.name}</a>
+
 
 block sidebar_right
   #ajax-container
-    p Gets replaced by socket io message
+    p Select a District or Poll for more information.

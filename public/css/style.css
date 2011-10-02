@@ -2,7 +2,41 @@ body {
   font-family: Helvetica, Arial, Sans-Serif;
   font-size: 12px;
 }
-#map_canvas {
-  width: 800px;
-  height: 450px;
+#page-wrap {
+  min-width: 780px;
+  max-width: 1260px;  
+}
+
+#header {
+  height: 40px;
+  background-color: #eecc11;
+  border-bottom: 1px solid #fff;
+}
+
+#content {
+
+}
+#leftwrapper {
+  float: left;
+  width: 100%;
+}
+#left {
+  margin-right: 350px;
+}
+#right {
+  float: left;
+  margin-left: -330px;
+  width: 300px;
+  padding: 15px;
+
+}
+
+#footer {
+  background-color: #0000ff;
+  height: 40px;
+  color: #fff;
+}
+
+#map_canvas img {
+  width: 100%;
 }
