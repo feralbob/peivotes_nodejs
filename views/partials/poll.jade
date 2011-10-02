@@ -1,5 +1,14 @@
-h3
-  POLL #{poll.number} - #{poll.name}
 p
-  Candidates go here.
+  << <a href="#" class="district-link" id="district-#{district.number}">Back to #{district.name}</a>
+h2
+  #{district.name}
+h3
+  #{poll.name}
+
+h4 Candidates
+ul
+  each candidate in district.candidates
+    li
+      #{candidate.firstname} #{candidate.lastname} - #{candidate.pollvotes}
+
 

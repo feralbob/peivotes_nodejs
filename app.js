@@ -2,7 +2,9 @@ var express = require('express'),
     app = express.createServer(),
     io = require('socket.io').listen(app),
     jade = require('jade'),
-    fs = require('fs');
+    fs = require('fs'),
+    xml2js = require('xml2js'),
+    util = require('util');
 
 var mongoose = require('mongoose'),
     Schema   = mongoose.Schema;
@@ -12,18 +14,18 @@ var CandidatesSchema = new Schema({
   firstname: String,
   party: String,
   fullparty: String,
-  votes: Number,
+  pollvotes: Number,
+  totalvotes: Number,
 });
 
 var PollsSchema = new Schema({
-  number: Number,
+  poll: String,
   name: String,
   candidates: [CandidatesSchema],
 });
 var DistrictSchema = new Schema({
   number: { type: Number, unique: true },
   name: String,
-  description: String,
   polls: [PollsSchema],
   candidates: [CandidatesSchema],
 });
@@ -32,7 +34,6 @@ mongoose.connect('mongodo://localhost/peielectiondb');
 
 mongoose.model('District', DistrictSchema);
 var Districts = mongoose.model('District', DistrictSchema);
-
 
 app.configure(function () {
   app.use(express.logger());
@@ -49,24 +50,72 @@ app.get('/', function (req, res) {
   });
 });
 
+app.get('/xml', function (req, res) {
+  parse_results_xml();
+  res.send('<pre>Districts saved!\n\n');
+});
+
+function parse_results_xml() {
+  console.log('New data!!! Must clear the old data.');
+  Districts.find().remove();
+  var parser = new xml2js.Parser();
+  fs.readFile(__dirname + '/provincial-results-rss.xml', function(err, data) {
+      parser.parseString(data, function (err, result) {
+        for (var did=1; did < 28; did++) {
+          var district = new Districts();
+          district.number = did;
+          for (var i=0; i < result['channel']['item'].length; i++) {
+            var poll = result['channel']['item'][i];
+            if (poll['electionspei:districtnumber'] == did) {
+              district.name = poll['electionspei:districtname'];
+              district.polls.push({poll: poll['electionspei:poll'], name: poll['electionspei:pollname']});
+              var pi = district.polls.length - 1;
+              district.candidates = Array();
+              for (var bc=0; bc < poll['electionspei:ballotcount'].length; bc++) {
+                var c = poll['electionspei:ballotcount'][bc]['@'];
+                if (c['lastname']) {
+                  var candidate = {
+                    lastname: c['lastname'],
+                    firstname: c['lastname'],
+                    party: c['party'],
+                    fullparty: c['fullparty'],
+                    pollvotes: c['pollvotes'],
+                    totalvotes: c['totalvotes']
+                  };
+                  district.polls[pi].candidates.push(candidate);
+                  delete c['pollvotes'];
+                  district.candidates.push(candidate);
+                }
+              }
+            }
+          }
+
+          district.save(function(err) {
+            if (err) {
+              throw err;
+            }
+            console.log('SAVED > ' + district.id);
+          });
+          delete district;
+        }
+      });
+  });
+}
+
 io.sockets.on('connection', function (socket) {
 
   socket.on('get_poll', function (data) {
     var dp = JSON.parse(data);
-    console.log("Data received from client, decoded:");
-    console.log(dp);
-
-    Districts.findOne({number: dp['district'], 'polls.number': dp['poll']}, function (err, district) {
-      console.log('DISTRICT');
-      console.log(district);
-      fs.readFile('./views/partials/poll.jade', 'utf8', function (err, data) {
-        if (err) throw err;
-        console.log('Sending poll to jade:');
-        console.log(district);
-        var html = jade.compile(data)({'poll': polls[0]});
-        console.log(html);
-        socket.emit('poll', html);
-      });
+    Districts.findOne({number: dp['district'], 'polls.poll': dp['poll']}, function (err, district) {      
+      for (var i=0; i < district.polls.length; i++){
+        if (district.polls[i].poll == dp['poll']) {
+          // @TODO replace with readFile() to do async.
+          var jadefile = fs.readFileSync('./views/partials/poll.jade');
+          var jadetemplate = jade.compile(jadefile);
+          var html = jadetemplate({'district': district, 'poll': district.polls[i]});
+          socket.emit('poll', html);
+        } 
+      }
     });
   });
 
@@ -80,41 +129,14 @@ io.sockets.on('connection', function (socket) {
     });
   });
 
+  fs.watchFile(__dirname + '/provincial-results-rss.xml', function (curr, prev) {
+    console.log('the current mtime is: ' + curr.mtime);
+    console.log('the previous mtime was: ' + prev.mtime);
+//    parse_results_xml();
+    socket.broadcast.emit('updated');
+  });
+
 });
 
+
 app.listen(4000);
-
-
-
-
-
-
-function create_district() {
-  var district = new Districts();
-  district.number = 1;
-  district.name = 'Souris - Elmira';
-  district.description = 'Commencing at East Point and bounded on the north by the Gulf of St. Lawrence; thence westwardly to a point on the shore of the Gulf of St. Lawrence where it intersects with township line # 42; thence southwardly along said township line to the Church Road; thence westwardly along said road to the Selkirk Road (Route # 309); thence southwardly along said road to Route # 2; thence westwardly along said road to the Dundas Road (Route # 4); thence southwardly along said road to township line # 55; thence southwardly along said township line to the Little River Road (Route # 314); thence eastwardly along said road and the Grove Pine Road to Route # 310; thence northwardly to the center of Little River; thence eastwardly along said river to Howe Bay; thence following said bay to Northumberland Strait; thence eastwardly along said strait to the point of commencement.';
-
-
-  var lib = {lastname: 'CAMPBELL', firstname: 'ALLAN', party: 'LIB', fullparty: 'Liberal Party of PEI', votes: 50};
-  var pc = {lastname: 'LAVIE', firstname: 'COLIN', party: 'PC', fullparty: 'PC Party of PEI', votes: 20};
-  district.candidates.push(lib);
-  district.candidates.push(pc);
-
-  district.polls.push({number: 1, name: 'North Lake'});
-  district.polls[0].candidates.push(lib);
-  district.polls[0].candidates.push(pc);
-  district.polls.push({number: 2, name: 'Red Point'});
-  district.polls.push({number: 3, name: 'Chepstow'});
-
-
-  district.save(function(err) {
-    if (err) {
-      throw err;
-    }
-    console.log('SAVED > ' + district.id);
-    mongoose.disconnect();
-  });
-}
-
-//create_district();
