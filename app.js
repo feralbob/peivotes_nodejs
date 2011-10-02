@@ -16,6 +16,10 @@ var CandidatesSchema = new Schema({
   fullparty: String,
   pollvotes: Number,
   totalvotes: Number,
+  pollleading: {type: Boolean, default: false},
+  polllead: Number,
+  totalleading: {type: Boolean, default: false},
+  totallead: Number,
 });
 
 var PollsSchema = new Schema({
@@ -45,7 +49,8 @@ app.set('view engine', 'jade');
 app.set('view options', {layout: false});
 
 app.get('/', function (req, res) {
-  Districts.find({}, function (err, districts) {
+  var query = Districts.find();
+  query.sort('number', 1).exec(function (err, districts) {
     res.render('root', {districts: districts});
   });
 });
@@ -55,6 +60,8 @@ app.get('/xml', function (req, res) {
   res.send('<pre>Districts saved!\n\n');
 });
 
+function sortNumber(a, b) {return a - b;}
+function sortNumberDesc(a, b) {return b - a;}
 function parse_results_xml() {
   console.log('New data!!! Must clear the old data.');
   Districts.find().remove();
@@ -71,20 +78,47 @@ function parse_results_xml() {
               district.polls.push({poll: poll['electionspei:poll'], name: poll['electionspei:pollname']});
               var pi = district.polls.length - 1;
               district.candidates = Array();
+              var c_pollvotes = Array();
+              var c_totalvotes = Array();
               for (var bc=0; bc < poll['electionspei:ballotcount'].length; bc++) {
                 var c = poll['electionspei:ballotcount'][bc]['@'];
-                if (c['lastname']) {
-                  var candidate = {
-                    lastname: c['lastname'],
-                    firstname: c['lastname'],
-                    party: c['party'],
-                    fullparty: c['fullparty'],
-                    pollvotes: c['pollvotes'],
-                    totalvotes: c['totalvotes']
-                  };
-                  district.polls[pi].candidates.push(candidate);
-                  delete c['pollvotes'];
-                  district.candidates.push(candidate);
+                c_pollvotes.push(c['pollvotes']);
+                c_totalvotes.push(c['totalvotes']);
+                var candidate = {
+                  lastname: c['lastname'],
+                  firstname: c['lastname'],
+                  party: c['party'],
+                  fullparty: c['fullparty'],
+                  pollvotes: c['pollvotes'],
+                  totalvotes: c['totalvotes'],
+                };
+                
+                district.polls[pi].candidates.push(candidate);
+                delete c['pollvotes'];
+                district.candidates.push(candidate);
+              }
+
+              c_pollvotes.sort(sortNumberDesc);
+              c_totalvotes.sort(sortNumberDesc);
+
+              for (var p=0; p < district.polls.length; p++) {
+                var cp_pollvotes = Array();
+                for (var c=0; c < district.polls[p].candidates.length; c++) {
+                  cp_pollvotes.push(district.polls[p].candidates[c].pollvotes);
+                }
+                cp_pollvotes.sort(sortNumberDesc);
+                for (var c=0; c < district.polls[p].candidates.length; c++) {
+                  if (Number(cp_pollvotes[0]) == Number(district.polls[p].candidates[c].pollvotes)) {
+                    district.polls[p].candidates[c].polllead = cp_pollvotes[0] - cp_pollvotes[1];
+                    district.polls[p].candidates[c].pollleading = true;
+                  }
+                }
+              }
+
+              for (var c=0; c < district.candidates.length; c++) {
+                if (c_totalvotes[0] == district.candidates[c].totalvotes) {
+                  district.candidates[c].totallead = c_totalvotes[0] - c_totalvotes[1];
+                  district.candidates[c].totalleading = true;
                 }
               }
             }
@@ -107,7 +141,7 @@ io.sockets.on('connection', function (socket) {
   socket.on('get_poll', function (data) {
     var dp = JSON.parse(data);
     Districts.findOne({number: dp['district'], 'polls.poll': dp['poll']}, function (err, district) {      
-      for (var i=0; i < district.polls.length; i++){
+      for (var i=0; i < district.polls.length; i++) {
         if (district.polls[i].poll == dp['poll']) {
           // @TODO replace with readFile() to do async.
           var jadefile = fs.readFileSync('./views/partials/poll.jade');
@@ -120,10 +154,25 @@ io.sockets.on('connection', function (socket) {
   });
 
   socket.on('get_district', function (data) {
-    Districts.findOne({number: data}, function (err, district) {
+    var query = Districts.findOne({number: data}, function (err, district) {
+      var d_polls = {};
+      var d_cans = [];
+      for (var i=0; i < district.polls.length; i++) {
+        d_polls[district.polls[i].poll] = district.polls[i];
+      }
+      for (var i=0; i < district.candidates.length; i++) {
+        d_cans[district.candidates[i].totalvotes] = district.candidates[i];
+      }
+      d_cans.reverse();
+      var d_cans_obj = {};
+      for (var i=0; i < d_cans.length; i++) {
+        if (d_cans[i]) {
+          d_cans_obj[i] = d_cans[i];
+        }
+      }
       fs.readFile('./views/partials/district.jade', 'utf8', function (err, data) {
         if (err) throw err;
-        var html = jade.compile(data)({'district': district});
+        var html = jade.compile(data)({'district': district, 'candidates': d_cans_obj, 'polls': d_polls});
         socket.emit('district', html);
       });
     });

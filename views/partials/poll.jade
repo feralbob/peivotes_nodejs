@@ -7,8 +7,10 @@ h3
 
 h4 Candidates
 ul
-  each candidate in district.candidates
+  each candidate in poll.candidates
     li
       #{candidate.firstname} #{candidate.lastname} - #{candidate.pollvotes}
+      - if (candidate.pollleading)
+        | (Lead: #{candidate.polllead})
 
 

@@ -2,7 +2,6 @@ extends layout
 
 block scripts
   script(src='/js/socketio-client.js')
-//-  script(src='http://maps.googleapis.com/maps/api/js?sensor=false')
 //-  script(src='/districts.js')
 //-  script(src='/map.js')
 
@@ -10,14 +9,17 @@ block content
   #map_canvas
     img(src="/map.png")
 
-  #district-links
-    h2 Districts
-    ul
-      each district in districts
-        li
-          <a href="#" class="district-link" id="district-#{district.number}">#{district.number} - #{district.name}</a>
 
 
 block sidebar_right
   #ajax-container
     p Select a District for more information.
+
+  #results-districts
+    p Results summary goes here.
+    h2 Districts
+    ul
+      each district in districts
+        li
+          <a href="#" class="district-link" id="district-#{district.number}">#{district.number} - #{district.name}</a>
+    

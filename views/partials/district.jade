@@ -3,14 +3,18 @@ h2
 
 h4 Candidates
 ul
-  each candidate in district.candidates
+
+  each candidate in candidates
     li
-      #{candidate.firstname} #{candidate.lastname} - #{candidate.totalvotes}
+      #{candidate.party} | #{candidate.firstname} #{candidate.lastname} - #{candidate.totalvotes}
+      - if (candidate.totalleading)
+        | (Lead: #{candidate.totallead})
 
 
 h4 Polls
 ul
-  each poll in district.polls
+
+  each poll in polls
     li
       <a href="#" class="poll-link" id="poll-#{district.number}-#{poll.poll}">#{poll.poll} - #{poll.name}</a>
 
